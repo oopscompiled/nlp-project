@@ -1,5 +1,5 @@
 # NLP Project
 
-Emotion classification project
+MBTI Personality Type Twitter Dataset
 
-Data was taken from: https://www.kaggle.com/datasets/praveengovi/emotions-dataset-for-nlp
+Data was given from: https://www.kaggle.com/datasets/mazlumi/mbti-personality-type-twitter-dataset/data
