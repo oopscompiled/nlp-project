@@ -1,5 +1,4 @@
 import kagglehub
-import os
 
 def loader():
     """
