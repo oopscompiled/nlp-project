@@ -6,7 +6,7 @@ def loader():
     Returns the path to the unzipped folder.
     """
     # downloading process 
-    path = kagglehub.dataset_download("mazlumi/mbti-personality-type-twitter-dataset")
+    path = kagglehub.dataset_download("datasnaek/mbti-type")
 
     print("Dataset downloaded at path:", path)
     return path
