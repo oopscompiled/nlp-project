@@ -21,7 +21,8 @@ def clean_data(data):
     if not isinstance(data, str):
         return ""
 
-    data = data.str.lower()
+    # data = data.str.lower()
+    
     # decode html entities
     data = html.unescape(data)
 
