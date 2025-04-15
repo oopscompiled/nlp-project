@@ -42,7 +42,7 @@ def clean_data(data):
 
     return data
 
-word_re = re.compile(r"\b[a-zA-Z]{3,}\b", re.IGNORECASE)
+word_re = re.compile(r"\b[a-zA-Z]{2,}\b", re.IGNORECASE)
 
 def extract_clean_words(text):
     return word_re.findall(text)
