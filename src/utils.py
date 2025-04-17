@@ -2,8 +2,6 @@ import re
 import html
 from bs4 import BeautifulSoup
 
-
-
 def clean_for_bert(text):
     if not isinstance(text, str):
         return ""
@@ -22,7 +20,7 @@ def clean_for_bert(text):
 
     return text
 
-word_re = re.compile(r"\b[a-zA-Z]{1,}\b", re.IGNORECASE)
+word_re = re.compile(r"\b[a-zA-Z]{2,}\b", re.IGNORECASE)
 
 def extract_clean_words(text):
     return word_re.findall(text)
