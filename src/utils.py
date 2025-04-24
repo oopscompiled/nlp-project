@@ -6,6 +6,8 @@ def clean_for_bert(text):
     if not isinstance(text, str):
         return ""
 
+    text = text.lower()
+    
     text = html.unescape(text)
     
     text = BeautifulSoup(text, "html.parser").get_text()
