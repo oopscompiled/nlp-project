@@ -1,4 +1,4 @@
-# 🧠 NLP Project: Emotion Classification from Twitter (X) Dataset
+# NLP Project: Emotion Classification from Twitter (X) Dataset
 
 ![GitHub](https://img.shields.io/github/license/OopsWrongCode/nlp-project)
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue)
