@@ -18,14 +18,14 @@ A natural language processing (NLP) project that classifies emotional personalit
 ```bash
 nlp_project/
 ├── notebooks/              
-│   ├── exploratory.ipynb       # EDA and data cleaning
-│   ├── training.ipynb          # Model training pipeline
-│   └── evaluation.ipynb        # Metrics and analysis
+│   ├── exploratory.ipynb
+│   ├── training.ipynb
+│   └── evaluation.ipynb
 ├── src/                    
-│   ├── model.py                # Model architecture and training logic
-│   ├── utils.py                # Helper functions
-│   └── data_loader.py          # Data loading and preprocessing
-├── requirements.txt            # Dependencies
-├── README.md                   # Project overview
+│   ├── model.py              
+│   ├── utils.py               
+│   └── data_loader.py         
+├── requirements.txt           
+├── README.md                 
 ├── .gitignore                  
-└── main.py                     # Entry point (optional CLI or script)
+└── main.py
