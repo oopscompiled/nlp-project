@@ -19,8 +19,7 @@ A natural language processing (NLP) project that classifies emotional personalit
 nlp_project/
 ├── notebooks/              
 │   ├── exploratory.ipynb
-│   ├── training.ipynb
-│   └── evaluation.ipynb
+│   ├── models_training.ipynb
 ├── src/                    
 │   ├── models.py              
 │   ├── utils.py               

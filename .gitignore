@@ -2,6 +2,8 @@ venv/
 
 .env
 
+.env.key
+
 .DS_Store
 .vscode/
 *.ipynb_checkpoints
