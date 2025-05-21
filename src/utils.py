@@ -1,6 +1,7 @@
 import re
 import html
 from bs4 import BeautifulSoup
+import copy
 
 def clean_for_bert(text):
     if not isinstance(text, str):
