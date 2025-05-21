@@ -22,7 +22,7 @@ nlp_project/
 │   ├── training.ipynb
 │   └── evaluation.ipynb
 ├── src/                    
-│   ├── model.py              
+│   ├── models.py              
 │   ├── utils.py               
 │   └── data_loader.py         
 ├── requirements.txt           
