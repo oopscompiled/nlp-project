@@ -1,3 +1,6 @@
+import torch.nn as nn
+import torch
+
 class MyLSTM(nn.Module):
     def __init__(self, bert_embedding_dim=768,embedding_dim=128, hidden_dim=64, output_dim=6, num_layers=1, bidirectional=False, dropout=0.3, fc_dropout=0.3, input_dropout=0.2):
         super(MyLSTM, self).__init__()
