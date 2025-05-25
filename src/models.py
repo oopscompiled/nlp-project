@@ -1,5 +1,10 @@
 import torch
 import torch.nn as nn
+    
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
 
 class MyLSTM(nn.Module):
     """
@@ -190,10 +195,10 @@ class HybridNN(nn.Module):
         Returns:
             Tensor: Output logits [batch_size, output_dim]
         """
-        # Input dropout
+        #input dropout
         x = self.input_dropout(embeddings)
 
-        # CNN: [B, seq_len, emb_dim] -> [B, emb_dim, seq_len]
+        # cnn: [B, seq_len, emb_dim] -> [B, emb_dim, seq_len]
         x = x.permute(0, 2, 1)
         x = self.conv1(x)
         x = self.max_pool(x)
@@ -213,3 +218,56 @@ class HybridNN(nn.Module):
         x = self.fc_dropout(attn_output)
         logits = self.classifier(x)
         return logits
+    
+ # simple baselines
+class Baselines:
+    def __init__(self, train_data, val_data, test_data, seed=42):
+        self.train_texts = train_data['text'].apply(lambda x: ' '.join(x) if isinstance(x, list) else str(x))
+        self.val_texts = val_data['text'].apply(lambda x: ' '.join(x) if isinstance(x, list) else str(x))
+        self.test_texts = test_data['text'].apply(lambda x: ' '.join(x) if isinstance(x, list) else str(x))
+        self.y_train = train_data['label']
+        self.y_val = val_data['label']
+        self.y_test = test_data['label']
+        self.seed = seed
+
+    def run_logistic_regression(self):
+        print("Running Logistic Regression with TF-IDF features...")
+        tfidf = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
+        X_train = tfidf.fit_transform(self.train_texts)
+        X_val = tfidf.transform(self.val_texts)
+        X_test = tfidf.transform(self.test_texts)
+
+        model = LogisticRegression(max_iter=1000, class_weight='balanced')
+        model.fit(X_train, self.y_train)
+
+        val_preds = model.predict(X_val)
+        test_preds = model.predict(X_test)
+
+        print("Validation Results:")
+        print(classification_report(self.y_val, val_preds))
+
+        print("Test Results:")
+        print(classification_report(self.y_test, test_preds))
+
+        return model, tfidf, val_preds, test_preds
+
+    def run_random_forest(self):
+        print("Running Random Forest with Bag-of-Words features...")
+        bow = CountVectorizer(max_features=7000)
+        X_train = bow.fit_transform(self.train_texts)
+        X_val = bow.transform(self.val_texts)
+        X_test = bow.transform(self.test_texts)
+
+        model = RandomForestClassifier(n_estimators=150, class_weight='balanced', random_state=self.seed)
+        model.fit(X_train, self.y_train)
+
+        val_preds = model.predict(X_val)
+        test_preds = model.predict(X_test)
+
+        print("Validation Results:")
+        print(classification_report(self.y_val, val_preds))
+
+        print("Test Results:")
+        print(classification_report(self.y_test, test_preds))
+
+        return model, bow, val_preds, test_preds
