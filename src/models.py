@@ -222,9 +222,9 @@ class HybridNN(nn.Module):
  # simple baselines
 class Baselines:
     def __init__(self, train_data, val_data, test_data, seed=42):
-        self.train_texts = train_data['text'].apply(lambda x: ' '.join(x) if isinstance(x, list) else str(x))
-        self.val_texts = val_data['text'].apply(lambda x: ' '.join(x) if isinstance(x, list) else str(x))
-        self.test_texts = test_data['text'].apply(lambda x: ' '.join(x) if isinstance(x, list) else str(x))
+        self.train_texts = train_data['text']
+        self.val_texts = val_data['text']
+        self.test_texts = test_data['text']
         self.y_train = train_data['label']
         self.y_val = val_data['label']
         self.y_test = test_data['label']
