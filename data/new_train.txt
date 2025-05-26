@@ -1,4 +1,4 @@
-text,label,lenght
+text,label,length
 i didnt feel humiliated,sadness,23
 i can go from feeling so hopeless to so damned hopeful just from being around someone who cares and is awake,sadness,108
 im grabbing a minute to post i feel greedy wrong,anger,48
