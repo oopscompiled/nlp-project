@@ -25,7 +25,7 @@ class MyLSTM(nn.Module):
         super().__init__()
 
         self.embedding_projection = nn.Linear(bert_embedding_dim, embedding_dim)
-        self.layer_norm = nn.LayerNorm(embedding_dim)
+        # self.layer_norm = nn.LayerNorm(embedding_dim)
         self.input_dropout = nn.Dropout(input_dropout)
 
         self.lstm = nn.LSTM(
@@ -54,7 +54,7 @@ class MyLSTM(nn.Module):
             Tensor: Output logits of shape [batch_size, output_dim].
         """
         x = self.embedding_projection(embeddings)
-        x = self.layer_norm(x)
+        # x = self.layer_norm(x)
         x = self.input_dropout(x)
 
         lstm_output, (h_n, _) = self.lstm(x)
@@ -88,7 +88,7 @@ class MyGRU(nn.Module):
         super().__init__()
 
         self.embedding_projection = nn.Linear(bert_embedding_dim, embedding_dim)
-        self.norm = nn.LayerNorm(embedding_dim)
+        # self.norm = nn.LayerNorm(embedding_dim)
         self.input_dropout = nn.Dropout(input_dropout)
 
         self.gru = nn.GRU(
@@ -112,7 +112,7 @@ class MyGRU(nn.Module):
             Tensor: Output logits of shape [batch_size, output_dim].
         """
         x = self.embedding_projection(embeddings)
-        x = self.norm(x)
+        # x = self.norm(x)
         x = self.input_dropout(x)
 
         _, h_n = self.gru(x)
@@ -167,7 +167,7 @@ class HybridNN(nn.Module):
             in_channels=embedding_dim,
             out_channels=conv_out_channels,
             kernel_size=kernel_size,
-            padding=1
+            padding='valid'
         )
         self.max_pool = nn.AdaptiveMaxPool1d(output_size=32)
         self.relu = nn.ReLU()
