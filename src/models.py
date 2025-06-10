@@ -1,10 +1,13 @@
 import torch
 import torch.nn as nn
-    
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
+from transformers import Trainer, TrainingArguments
+from gensim.downloader import load
+from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
 
 class MyLSTM(nn.Module):
     """
@@ -219,6 +222,52 @@ class HybridNN(nn.Module):
         logits = self.classifier(x)
         return logits
     
+class TextCNN(nn.Module):
+    """
+    CNN-based text classifier using pre-trained embeddings (e.g., GloVe).
+    Applies multiple 1D convolutions with different kernel sizes and max pooling.
+    """
+    def __init__(
+        self,
+        vocab_size: int,
+        embedding_dim: int = 100,
+        n_filters: int = 64,
+        filter_sizes: list = [3, 4, 5],
+        output_dim: int = 6,
+        dropout: float = 0.5
+    ) -> None:
+        super().__init__()
+        
+        self.embedding = nn.Embedding(vocab_size, embedding_dim)
+        
+        self.convs = nn.ModuleList([
+            nn.Conv1d(in_channels=embedding_dim, out_channels=n_filters, kernel_size=fs, padding='valid')
+            for fs in filter_sizes
+        ])
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(dropout)
+        self.fc = nn.Linear(len(filter_sizes) * n_filters, output_dim)
+
+    def forward(self, text: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            text (Tensor): Input tensor [B, seq_len]
+        Returns:
+            Tensor: Output logits [B, output_dim]
+        """
+        # [B, seq_len] -> [B, seq_len, embedding_dim]
+        embedded = self.embedding(text)
+        
+        # [B, seq_len, embedding_dim] -> [B, embedding_dim, seq_len]
+        embedded = embedded.permute(0, 2, 1)
+        conved = [self.relu(conv(embedded)) for conv in self.convs]
+        pooled = [nn.functional.max_pool1d(conv, conv.shape[2]).squeeze(2) for conv in conved]
+        cat = self.dropout(torch.cat(pooled, dim=1))  # [B, n_filters * len(filter_sizes)]
+
+        logits = self.fc(cat)
+
+        return logits
+    
  # simple baselines
 class Baselines:
     def __init__(self, train_data, val_data, test_data, seed=42):
@@ -229,6 +278,8 @@ class Baselines:
         self.y_val = val_data['label']
         self.y_test = test_data['label']
         self.seed = seed
+        torch.manual_seed(seed)
+        np.random.seed(seed)
 
     def run_logistic_regression(self):
         print("Running Logistic Regression with TF-IDF features...")
@@ -271,3 +322,139 @@ class Baselines:
         print(classification_report(self.y_test, test_preds))
 
         return model, bow, val_preds, test_preds
+
+    def run_text_cnn(self, batch_size=64, epochs=10, max_len=64):
+        print("Running Text CNN with GloVe embeddings...")
+        #glove embeds
+        glove = load('glove-wiki-gigaword-100')  # 100-dim
+        word2idx = {'<PAD>': 0}  #vocab
+        for word in glove.key_to_index:
+            word2idx[word] = len(word2idx)
+        
+        train_dataset = EmotionDataset(self.train_texts, self.y_train, word2idx=word2idx, max_len=max_len)
+        val_dataset = EmotionDataset(self.val_texts, self.y_val, word2idx=word2idx, max_len=max_len)
+        test_dataset = EmotionDataset(self.test_texts, self.y_test, word2idx=word2idx, max_len=max_len)
+        
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size)
+        test_loader = DataLoader(test_dataset, batch_size=batch_size)
+        
+        model = TextCNN(vocab_size=len(word2idx), embedding_dim=100, output_dim=6)
+        
+        with torch.no_grad(): #torch.inference_mode()
+            for word, idx in word2idx.items():
+                if word in glove:
+                    model.embedding.weight[idx] = torch.tensor(glove[word])
+        
+        model = model.to(DEVICE)
+        criterion = nn.CrossEntropyLoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+        
+        for epoch in range(epochs):
+            model.train()
+            train_loss = 0
+            for batch in train_loader:
+                text, labels = batch['text'].to(DEVICE), batch['labels'].to(DEVICE)
+                optimizer.zero_grad()
+                outputs = model(text)
+                loss = criterion(outputs, labels)
+                loss.backward()
+                optimizer.step()
+                train_loss += loss.item()
+            
+            model.eval()
+            val_preds, val_true = [], []
+            with torch.no_grad():
+                for batch in val_loader:
+                    text, labels = batch['text'].to(DEVICE), batch['labels'].to(DEVICE)
+                    outputs = model(text)
+                    preds = torch.argmax(outputs, dim=1)
+                    val_preds.extend(preds.cpu().numpy())
+                    val_true.extend(labels.cpu().numpy())
+            
+            print(f"Epoch {epoch+1}/{epochs}")
+            print("Validation Results:")
+            print(classification_report(val_true, val_preds))
+        
+        model.eval()
+        test_preds, test_true = [], []
+        with torch.no_grad():
+            for batch in test_loader:
+                text, labels = batch['text'].to(DEVICE), batch['labels'].to(DEVICE)
+                outputs = model(text)
+                preds = torch.argmax(outputs, dim=1)
+                test_preds.extend(preds.cpu().numpy())
+                test_true.extend(labels.cpu().numpy())
+        
+        print("Test Results:")
+        print(classification_report(test_true, test_preds))
+        
+        return model, word2idx, val_preds, test_preds
+
+
+    def run_distilbert(self, batch_size=64, epochs=3, max_len=64):
+        print("Running DistilBERT...")
+        
+        print(f"Training data size: {len(self.train_texts)} samples")
+        print(f"Validation data size: {len(self.val_texts)} samples")
+        print(f"Test data size: {len(self.test_texts)} samples")
+        
+        tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+        model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased', num_labels=6)
+        
+        print(f"Using device: {DEVICE}")
+        model = model.to(DEVICE)
+        
+        train_dataset = EmotionDataset(self.train_texts, self.y_train, tokenizer=tokenizer, max_len=max_len)
+        val_dataset = EmotionDataset(self.val_texts, self.y_val, tokenizer=tokenizer, max_len=max_len)
+        test_dataset = EmotionDataset(self.test_texts, self.y_test, tokenizer=tokenizer, max_len=max_len)
+        
+        training_args = TrainingArguments(
+            output_dir='./results',
+            run_name='distilbert_emotion_classification',
+            num_train_epochs=epochs,
+            per_device_train_batch_size=batch_size,
+            per_device_eval_batch_size=batch_size,
+            learning_rate=2e-5, 
+            warmup_steps=min(500, len(self.train_texts) // (10 * batch_size)),  
+            weight_decay=0.01,
+            logging_dir='./logs',
+            logging_steps=250,
+            eval_strategy='steps',
+            eval_steps=250,
+            save_strategy='steps',
+            save_steps=250,
+            load_best_model_at_end=True,
+            metric_for_best_model='macro_f1',
+            seed=self.seed,
+            report_to='none'
+        )
+        
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_dataset,
+            eval_dataset=val_dataset,
+            compute_metrics=lambda p: {
+                'accuracy': (p.predictions.argmax(-1) == p.label_ids).mean(),
+                'macro_f1': classification_report(p.label_ids, p.predictions.argmax(-1), output_dict=True)['macro avg']['f1-score']
+            }
+        )
+        
+        print("Starting training...")
+        trainer.train()
+        print("Training completed.")
+        
+        # Валидация
+        print("Evaluating on validation set...")
+        val_preds = trainer.predict(val_dataset).predictions.argmax(-1)
+        print("Validation Results:")
+        print(classification_report(self.y_val, val_preds))
+        
+        # Тестирование
+        print("Evaluating on test set...")
+        test_preds = trainer.predict(test_dataset).predictions.argmax(-1)
+        print("Test Results:")
+        print(classification_report(self.y_test, test_preds))
+        
+        return model, tokenizer, val_preds, test_preds
